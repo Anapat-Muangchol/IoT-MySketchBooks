@@ -17,11 +17,11 @@ static const uint8_t D8 = 15;
 static const uint8_t D9 = 3;
 static const uint8_t D10 = 1;
 
-char WIFI_SSID[] = "JAFOM-WIFI";
-char WIFI_PASSWORD[] = "57160033";
+#define WIFI_SSID "JAFOM-WIFI"
+#define WIFI_PASSWORD "57160033"
 
 // Blynk config
-char BLYNK_TOKEN[] = "nhI9acucFYFwYs85zVqK3L6Vf_xSjMuQ";
+#define BLYNK_TOKEN "nhI9acucFYFwYs85zVqK3L6Vf_xSjMuQ"
 
 // Line config
 #define LINE_TOKEN_NO_1 "dvYaCu39rIH9FKcbSgbaIjrkysJAn9klptiynq2sCbI"
@@ -67,13 +67,13 @@ void loop()
 
   // Test - Read
   int buttonState = digitalRead(D4);
-  Serial.print("buttonState :  ");
-  Serial.println(!buttonState);
+//  Serial.print("buttonState :  ");
+//  Serial.println(!buttonState);
   if (buttonState == 0) {
     currentTemp = 1;
   }
-  Serial.print("currentTemp :  ");
-  Serial.println(currentTemp);
+//  Serial.print("currentTemp :  ");
+//  Serial.println(currentTemp);
   
   if (cntRunTemp >= 20) {
     cntRunTemp = 0;
@@ -107,15 +107,14 @@ void getTempAndHumi(int sendToLine) {
 
     // sendToLine : 0=no, 1=send
     if (sendToLine == 1) {
+      
       LINE.setToken(LINE_TOKEN_NO_1);
-//      if (t > 26) {
-//        LINE.notifySticker("Test", 2, 27);
-//      } else {
-//        LINE.notifySticker("Test", 2, 29);
-//      }
-      LINE.notifySticker("Test", 2, 27);
-      LINE.notify("Temperature: " + String(t));
-      LINE.notify("Humidity: " + String(h));
+      if (t > 26) {
+        LINE.notifySticker("อุณหภูมิ " + String(t) + " ", 2, 27);
+      } else {
+        LINE.notifySticker("อุณหภูมิ " + String(t) + " ", 2, 29);
+      }
+      LINE.notify("ความชื้น " + String(h));
       currentTemp = 0;
       Serial.println("Sending to line.");
     }
