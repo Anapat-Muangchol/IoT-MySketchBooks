@@ -1,7 +1,5 @@
-
-#define BLYNK_PRINT Serial    // Comment this out to disable prints and save space
 #include <ESP8266WiFi.h>
-#include <BlynkSimpleEsp8266.h>
+#include <MicroGear.h>
 #include <TridentTD_LineNotify.h>
 
 // Map NodeMCU GPIO
@@ -27,11 +25,14 @@ char *WIFI_PASSWORD[] = {
   "57160033",
   ""
 };
-// #define WIFI_SSID "JAFOM-WIFI"
-// #define WIFI_PASSWORD "57160033"
+WiFiClient client;
 
-// Blynk config
-#define BLYNK_TOKEN "nhI9acucFYFwYs85zVqK3L6Vf_xSjMuQ"
+// Microgear Config
+#define APPID   "MyWeatherSensor"
+#define KEY     "FrPtVqpnnykpHvU"
+#define SECRET  "QMXxNwpolx0lwcevgEQwkM3C3" 
+#define ALIAS   "MyNodeMCU_01"
+MicroGear microgear(client);
 
 // Line config
 #define LINE_TOKEN_NO_1 "dvYaCu39rIH9FKcbSgbaIjrkysJAn9klptiynq2sCbI"
@@ -49,9 +50,10 @@ void setup()
   // Wifi Setup
   int indexOfWifi = wifiSetup();
 
-  // Blynk Setup
-  Blynk.begin(BLYNK_TOKEN, WIFI_SSID[indexOfWifi], WIFI_PASSWORD[indexOfWifi]);
-  
+  // Microgear Setup
+  microgear.init(KEY, SECRET, ALIAS);
+  microgear.connect(APPID);
+
   // DHT Setup
   dht.begin();
 
@@ -103,29 +105,25 @@ int cntRunTemp = 0;
 int currentTemp = 0;
 void loop()
 {
-  Blynk.run();
 
   // Test - Read
-  int buttonState = digitalRead(D4);
+//  int buttonState = digitalRead(D4);
 //  Serial.print("buttonState :  ");
 //  Serial.println(!buttonState);
-  if (buttonState == 0) {
-    currentTemp = 1;
-  }
+//  if (buttonState == 0) {
+//    currentTemp = 1;
+//  }
 //  Serial.print("currentTemp :  ");
 //  Serial.println(currentTemp);
   
-  if (cntRunTemp >= 20) {
-    cntRunTemp = 0;
-    getTempAndHumi(currentTemp);
-  }
+  getTempAndHumi();
   cntRunTemp++;
   
-  delay(500) ;
+  delay(10000) ;
 }
 
 int tempSession = -1;
-void getTempAndHumi(int sendToLine) {
+void getTempAndHumi() {
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
@@ -138,13 +136,25 @@ void getTempAndHumi(int sendToLine) {
     Serial.print("Temperature: "); 
     Serial.print(t);
     Serial.print(" *C");
-    Blynk.virtualWrite(V1, t);
     
     Serial.print(" %\t");
     
     Serial.print("Humidity: "); 
     Serial.println(h);
-    Blynk.virtualWrite(V2, h);
+
+    // Send To Netpie
+    if (microgear.connected()) {
+      microgear.publish("/Temperature", t);
+      microgear.publish("/Humidity", h);
+      Serial.printf("Publish at [%lu]\r\n", millis());
+    }else {
+      while (!microgear.connected()) {
+        Serial.println("connection lost, reconnect...");
+        microgear.connect(APPID);
+        Serial.println("reconnect...");
+        delay(2000);
+      }
+    }
 
     int session = -1;
     int STK_ID, STKPKG_ID;
@@ -166,8 +176,8 @@ void getTempAndHumi(int sendToLine) {
       STK_ID = 176;
     }
     
-    // sendToLine : 0=no, 1=send
-    if (sendToLine == 1 || session != tempSession) {
+    // sendToLine
+    if (session != tempSession) {
       LINE.setToken(LINE_TOKEN_NO_1);
       LINE.notifySticker("อุณหภูมิ " + String(t) + " ", STKPKG_ID, STK_ID);
       LINE.notify("ความชื้น " + String(h));
